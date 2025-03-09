@@ -3,9 +3,17 @@ import pickle
 import os
 from dotenv import load_dotenv
 import google_custom_search
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 
 # 讀取 .env 檔案
 load_dotenv()
+
+if not os.getenv('SECRET_KEY'):
+    secret_key = os.urandom(24)
+    with open('.env', 'a') as f:
+        # 將密鑰以 hex 格式寫入 .env 檔案
+        f.write(f"SECRET_KEY={secret_key.hex()}\n") 
 
 # 設定 OpenAI API 金鑰
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -18,31 +26,34 @@ openai.api_key = OPENAI_API_KEY
 # Google 搜尋工具設置
 google = google_custom_search.CustomSearch(google_custom_search.RequestsAdapter(GOOGLE_API_KEY, GOOGLE_ENGINE_ID))
 
-# 記錄聊天歷史
-HIST_FILE = "hist.dat"
+# 初始化 Flask
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
 
-def save_hist(hist):
-    try:
-        with open(HIST_FILE, 'wb') as f:
-            pickle.dump(hist, f)
-    except:
-        print('無法寫入歷史檔')
+CORS(app)
 
-def load_hist():
-    try:
-        with open(HIST_FILE, 'rb') as f:
-            return pickle.load(f)
-    except:
-        print('無法開啟歷史檔')
-        return []
+# 讀取對話歷史紀錄
+def load_history():
+    if 'messages' not in session:
+        # 如果 session 中沒有 messages，則檢查是否有檔案存儲對話紀錄
+        if os.path.exists('chat_history.pkl'):
+            with open('chat_history.pkl', 'rb') as f:
+                session['messages'] = pickle.load(f)
+        else:
+            session['messages'] = [{"role": "system", "content": "請扮演一位智能助理，記住我說過的話"}]
+
+# 儲存對話歷史紀錄
+def save_history():
+    with open('chat_history.pkl', 'wb') as f:
+        pickle.dump(session['messages'], f)
 
 def google_search(user_msg, num_results=5):
-  print('===== 啟動 Google 搜尋 =====')
-  content = "以下為已發生的事實：\n"
-  for res in google.search(user_msg, num_results=num_results):
-      content += f"標題：{res.title}\n摘要：{res.snippet}\n\n"
-  content += "請依照上述事實回答以下問題。\n"
-  return content
+    print('===== 啟動 Google 搜尋 =====')
+    content = "以下為已發生的事實：\n"
+    for res in google.search(user_msg, num_results=num_results):
+        content += f"標題：{res.title}\n摘要：{res.snippet}\n\n"
+    content += "請依照上述事實回答以下問題。\n"
+    return content
 
 def chat_with_gpt(user_input, messages):
     messages.append({"role": "user", "content": user_input})
@@ -67,35 +78,40 @@ def chat_with_gpt(user_input, messages):
         )
         reply = response.choices[0].message
         
+        # 檢查是否需要 Google 搜尋
         if hasattr(reply, "function_call") and reply.function_call:
-          # 確認 arguments 是否是字典，如果是字串，解析成字典
-          if isinstance(reply.function_call.arguments, str):
-              import json
-              reply.function_call.arguments = json.loads(reply.function_call.arguments)
-          
-          # 現在可以安全地存取 query
-          search_query = reply.function_call.arguments["query"]
-          search_results = google_search(search_query)
-          messages.append({"role": "function", "name": "google_search", "content": search_results})
-          return chat_with_gpt(user_input, messages)  # 重新呼叫 GPT
+            # 確認 arguments 是否是字典，如果是字串，解析成字典
+            if isinstance(reply.function_call.arguments, str):
+                import json
+                reply.function_call.arguments = json.loads(reply.function_call.arguments)
+            
+            search_query = reply.function_call.arguments["query"]
+            search_results = google_search(search_query)
+            messages.append({"role": "function", "name": "google_search", "content": search_results})
+            # 重新呼叫 GPT
+            return chat_with_gpt(user_input, messages) 
         
         messages.append({"role": "assistant", "content": reply.content})
         return reply.content
     except openai.APIError as err:
         return f"發生錯誤：{err}"
 
-# 初始化聊天歷史
-messages = load_hist()
-if not messages:
-    messages.append({"role": "system", "content": "請扮演一位智能助理，記住我說過的話"})
+@app.route("/chat", methods=["POST"])
+def chat():
+    load_history()
+    user_input = request.json.get("message", "").strip()
+    if not user_input:
+        return jsonify({"response": "請輸入內容"}), 400
 
-# 交互式聊天
-while True:
-    user_input = input("使用者輸入：")
-    if not user_input.strip():
-        break
-    response = chat_with_gpt(user_input, messages)
-    print(f"ChatGPT API：{response}\n")
+    # 聊天並更新歷史
+    response = chat_with_gpt(user_input, session['messages'])
+    session['messages'].append({"role": "assistant", "content": response})
 
-# 儲存歷史記錄
-save_hist(messages)
+    # 儲存更新後的對話歷史
+    save_history()
+    print('session: ', session)
+
+    return jsonify({"response": response})
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5001)

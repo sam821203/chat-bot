@@ -1,12 +1,14 @@
 [tool.poetry]
-name = "chatbot_with_context"
+name = "chatbot"
 version = "0.1.0"
-description = "A chatbot that maintains conversation history and uses Google search for uncertain queries."
-authors = ["Your Name <your.email@example.com>"]
+description = "Flask API for AI chatbot with Google search integration."
+authors = ["Yu Hao Huang <sam821203@yahoo.com.tw>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.11.11"
+flask = "^3.0.0"
+flask-cors = "^4.0.0"
 openai = "^1.3"
 pickle-mixin = "^1.0.2"
 python-dotenv = "^1.0.1"
@@ -14,7 +16,7 @@ googlesearch-python = "^1.1.0"
 google-custom-search = "^3.0.0"
 
 [tool.poetry.scripts]
-chatbot = "chatbot_with_context:main"
+chatbot = "chatbot:main"
 
 [build-system]
 requires = ["poetry-core"]
