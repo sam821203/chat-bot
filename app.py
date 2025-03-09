@@ -1,9 +1,8 @@
 import openai
 import pickle
 import os
-from googlesearch import search
-import json
 from dotenv import load_dotenv
+import google_custom_search
 
 # 讀取 .env 檔案
 load_dotenv()
@@ -13,10 +12,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 GOOGLE_ENGINE_ID = os.getenv('GOOGLE_ENGINE_ID')
 
+# 設置 OpenAI API 金鑰
 openai.api_key = OPENAI_API_KEY
 
 # Google 搜尋工具設置
-# google = google_custom_search.CustomSearch(google_custom_search.RequestsAdapter(GOOGLE_API_KEY, GOOGLE_ENGINE_ID))
+google = google_custom_search.CustomSearch(google_custom_search.RequestsAdapter(GOOGLE_API_KEY, GOOGLE_ENGINE_ID))
 
 # 記錄聊天歷史
 HIST_FILE = "hist.dat"
@@ -36,32 +36,19 @@ def load_hist():
         print('無法開啟歷史檔')
         return []
 
-def google_search(query, num_results=5):
-  """
-  使用 `googlesearch-python` 來搜尋 Google，並返回前 `num_results` 筆結果。
-
-  :param query: 搜尋關鍵字
-  :param num_results: 要獲取的搜尋結果數量
-  :return: 格式化的搜尋結果字串
-  """
-  print(f"===== 啟動 Google 搜尋: {query} =====")
-  results = "以下為已發生的事實：\n"
-
-  try:
-      for i, result in enumerate(search(query, num=num_results), start=1):
-          results += f"{i}. {result}\n"
-
-      results += "請依照上述事實回答以下問題。\n"
-  except Exception as e:
-      results = f"Google 搜尋時發生錯誤: {e}"
-
-  return results
+def google_search(user_msg, num_results=5):
+  print('===== 啟動 Google 搜尋 =====')
+  content = "以下為已發生的事實：\n"
+  for res in google.search(user_msg, num_results=num_results):
+      content += f"標題：{res.title}\n摘要：{res.snippet}\n\n"
+  content += "請依照上述事實回答以下問題。\n"
+  return content
 
 def chat_with_gpt(user_input, messages):
     messages.append({"role": "user", "content": user_input})
     try:
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            model="gpt-3.5-turbo",
             messages=messages,
             functions=[
                 {
@@ -81,9 +68,6 @@ def chat_with_gpt(user_input, messages):
         reply = response.choices[0].message
         
         if hasattr(reply, "function_call") and reply.function_call:
-          # 打印 function_call 內容來確認結構
-          # print(f"function_call: {reply.function_call}")
-          
           # 確認 arguments 是否是字典，如果是字串，解析成字典
           if isinstance(reply.function_call.arguments, str):
               import json
