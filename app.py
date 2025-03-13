@@ -48,7 +48,6 @@ def save_history():
         pickle.dump(session['messages'], f)
 
 def google_search(user_msg, num_results=5):
-    print('===== 啟動 Google 搜尋 =====')
     content = "以下為已發生的事實：\n"
     for res in google.search(user_msg, num_results=num_results):
         content += f"標題：{res.title}\n摘要：{res.snippet}\n\n"
@@ -91,7 +90,6 @@ def chat_with_gpt(user_input, messages):
             # 重新呼叫 GPT
             return chat_with_gpt(user_input, messages) 
         
-        messages.append({"role": "assistant", "content": reply.content})
         return reply.content
     except openai.APIError as err:
         return f"發生錯誤：{err}"
@@ -109,8 +107,6 @@ def chat():
 
     # 儲存更新後的對話歷史
     save_history()
-    print('session: ', session)
-
     return jsonify({"response": response})
 
 if __name__ == "__main__":

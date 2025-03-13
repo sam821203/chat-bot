@@ -30,5 +30,6 @@ coverage
 
 *.tsbuildinfo
 
-# backend 底下特定資料夾
-backend/uploaded_pdfs/
+# 特定資料夾
+chat_history.pkl
+poetry.lock
