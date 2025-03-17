@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: chat-bot
+    runtime: python
+    buildCommand: "poetry install"
+    startCommand: "poetry run python app.py"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_ENGINE_ID
+        sync: false
+      - key: SECRET_KEY
+        sync: false
