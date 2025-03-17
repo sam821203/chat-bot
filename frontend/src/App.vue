@@ -37,7 +37,7 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    const response = await fetch('http://localhost:5001/chat', {
+    const response = await fetch('http://localhost:10000/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
