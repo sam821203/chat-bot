@@ -94,6 +94,10 @@ def chat_with_gpt(user_input, messages):
     except openai.APIError as err:
         return f"發生錯誤：{err}"
 
+@app.route("/", methods=['GET'])
+def home():
+        return "<h1>Chat Bot</h1>"
+
 @app.route("/chat", methods=["POST"])
 def chat():
     load_history()
