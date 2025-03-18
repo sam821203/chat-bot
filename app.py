@@ -97,9 +97,9 @@ def chat_with_gpt(user_input, messages):
 @app.route("/chat", methods=["POST"])
 def chat():
     load_history()
-    user_input = request.json.get("message", "").strip()
+    user_input = request.get_json(force=True).get("message", "").strip()
     if not user_input:
-        return jsonify({"response": "請輸入內容"}), 400
+        return jsonify({"response": "請輸入內容"}), 400 
 
     # 聊天並更新歷史
     response = chat_with_gpt(user_input, session['messages'])
