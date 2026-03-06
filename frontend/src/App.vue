@@ -1,10 +1,14 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 
+const envApiBase =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.DEV ? 'http://localhost:10000' : 'https://chat-bot-7ua2.onrender.com')
 const message = ref('')
 const messages = ref([])
 const loading = ref(false)
 const messagesContainer = ref(null)
+const mode = ref('ask')
 
 const userIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,12 +41,12 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    const response = await fetch('https://chat-bot-7ua2.onrender.com/chat', {
+    const response = await fetch(`${envApiBase}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify({ message: userMessage, mode: mode.value }),
     })
 
     const data = await response.json()
@@ -96,6 +100,16 @@ const scrollToBottom = () => {
           <div class="loading-dot"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="mode-selector">
+      <button type="button" :class="['mode-btn', { active: mode === 'ask' }]" @click="mode = 'ask'">
+        一般問答 (Ask)
+      </button>
+      <button type="button" :class="['mode-btn', { active: mode === 'agent' }]" @click="mode = 'agent'">
+        智慧助理 (Agent)
+      </button>
     </div>
 
     <!-- Input Form -->
@@ -256,6 +270,37 @@ const scrollToBottom = () => {
   50% {
     transform: translateY(-4px);
   }
+}
+
+.mode-selector {
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.mode-btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: #f96887;
+  color: #1f2937;
+}
+
+.mode-btn.active {
+  background-color: #f96887;
+  border-color: #f96887;
+  color: white;
 }
 
 .chat-form {
