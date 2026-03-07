@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Flask API for AI chatbot with Google search integration."
 authors = ["Yu Hao Huang <sam821203@yahoo.com.tw>"]
 license = "MIT"
-package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11.11"
