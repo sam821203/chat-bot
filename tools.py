@@ -22,9 +22,12 @@ def _get_search_client():
 
 
 @tool
-def google_search(query: str, num_results: int = 5) -> str:
-    """使用 Google 搜尋查詢最新資訊。當需要即時或事實性資訊時使用此工具。
-    query: 要搜尋的關鍵字或問題。
+def google_search(query: str, num_results: int = 10) -> str:
+    """Use Google Search to get the latest information. 使用 Google 搜尋查詢最新資訊。
+    You must call this tool when: 以下情況必須先呼叫此工具再回答：
+    - Recent/current events, news, war, conflict, pandemic, election, or specific numbers/dates; 時事或近期新聞、戰爭／衝突／疫情／選舉、股價／匯率／人數／何時等具體數字或日期；
+    - User asks to "look up latest" or "search for"; 或用戶要求查最新／幫我查。
+    query: search keywords or the question. 要搜尋的關鍵字或問題。
     """
     client = _get_search_client()
     content = "以下為已發生的事實：\n"

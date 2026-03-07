@@ -5,6 +5,7 @@ Nodes: chatbot (calls LLM; ask = no tools, agent = with tools), tools (ToolNode)
 Edges: START -> chatbot; chatbot -> conditional (Ask -> END, Agent + tool_calls -> tools else END); tools -> chatbot.
 """
 
+import os
 from typing import Annotated, Literal
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -30,7 +31,7 @@ class ChatState(TypedDict):
 def _chatbot_node(state: ChatState) -> dict:
     messages = state["messages"]
     mode = state["mode"]
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o"), temperature=0)
     if mode == "agent":
         llm = llm.bind_tools([google_search])
     response = llm.invoke(messages)

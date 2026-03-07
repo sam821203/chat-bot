@@ -1,5 +1,7 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted, watch } from 'vue'
+
+const STORAGE_KEY = 'chatbot_messages'
 
 const envApiBase =
   import.meta.env.VITE_API_BASE ||
@@ -9,6 +11,30 @@ const messages = ref([])
 const loading = ref(false)
 const messagesContainer = ref(null)
 const mode = ref('ask')
+
+const loadHistory = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.every((m) => m && typeof m.content === 'string' && typeof m.isUser === 'boolean')) {
+      messages.value = parsed
+    }
+  } catch {
+    // ignore invalid or missing data
+  }
+}
+
+const saveHistory = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
+  } catch {
+    // ignore quota or other errors
+  }
+}
+
+onMounted(loadHistory)
+watch(messages, saveHistory, { deep: true })
 
 const userIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -41,18 +67,26 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
+    const payloadMessages = messages.value.map((m) => ({
+      role: m.isUser ? 'user' : 'assistant',
+      content: m.content,
+    }))
     const response = await fetch(`${envApiBase}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: userMessage, mode: mode.value }),
+      body: JSON.stringify({ messages: payloadMessages, mode: mode.value }),
     })
 
     const data = await response.json()
 
-    // 添加機器人回應
-    messages.value.push({ content: data.response, isUser: false })
+    // 添加機器人回應（若有 used_search 則標記此則曾使用 Google 搜尋）
+    messages.value.push({
+      content: data.response,
+      isUser: false,
+      usedSearch: data.used_search === true,
+    })
   } catch (error) {
     console.error('Error:', error)
     messages.value.push({
@@ -90,7 +124,10 @@ const scrollToBottom = () => {
         :class="['message', msg.isUser ? 'user' : 'assistant']"
       >
         <div class="message-avatar" v-html="msg.isUser ? userIcon : botIcon"></div>
-        <div class="message-content">{{ msg.content }}</div>
+        <div class="message-body">
+          <div class="message-content">{{ msg.content }}</div>
+          <div v-if="msg.usedSearch" class="search-badge">已使用 Google 搜尋</div>
+        </div>
       </div>
       <div v-if="loading" class="message assistant">
         <div class="message-avatar" v-html="botIcon"></div>
@@ -220,6 +257,13 @@ const scrollToBottom = () => {
   background-color: #4b5563;
 }
 
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .message-content {
   padding: 0.75rem;
   border-radius: 0.5rem;
@@ -234,6 +278,12 @@ const scrollToBottom = () => {
 .message.assistant .message-content {
   background-color: #f2f2f2;
   color: #1f2937;
+}
+
+.search-badge {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* Loading animation */
