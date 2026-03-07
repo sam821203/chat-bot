@@ -1,5 +1,14 @@
 <script setup>
 import { ref, nextTick, onMounted, watch } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+/** Render assistant content as safe HTML: Markdown → HTML → DOMPurify. Only use for assistant messages. */
+function renderMarkdown(text) {
+  if (text == null || typeof text !== 'string') return ''
+  const html = marked.parse(text)
+  return DOMPurify.sanitize(html)
+}
 
 const STORAGE_KEY = 'chatbot_messages'
 
@@ -59,7 +68,6 @@ const sendMessage = async () => {
 
   // 添加用戶訊息
   messages.value.push({ content: message.value, isUser: true })
-  const userMessage = message.value
   message.value = ''
   loading.value = true
 
@@ -125,7 +133,13 @@ const scrollToBottom = () => {
       >
         <div class="message-avatar" v-html="msg.isUser ? userIcon : botIcon"></div>
         <div class="message-body">
-          <div class="message-content">{{ msg.content }}</div>
+          <div
+            class="message-content"
+            :class="{ 'message-content--md': !msg.isUser }"
+          >
+            <template v-if="msg.isUser">{{ msg.content }}</template>
+            <div v-else v-html="renderMarkdown(msg.content)"></div>
+          </div>
           <div v-if="msg.usedSearch" class="search-badge">已使用 Google 搜尋</div>
         </div>
       </div>
@@ -278,6 +292,64 @@ const scrollToBottom = () => {
 .message.assistant .message-content {
   background-color: #f2f2f2;
   color: #1f2937;
+}
+
+/* Markdown-rendered content (assistant only); use :deep for v-html children */
+.message-content--md :deep(h2) {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0.75em 0 0.35em;
+}
+.message-content--md :deep(h2:first-child) {
+  margin-top: 0;
+}
+.message-content--md :deep(h3),
+.message-content--md :deep(h4) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.6em 0 0.25em;
+}
+.message-content--md :deep(p) {
+  margin: 0.5em 0;
+}
+.message-content--md :deep(p:first-child) {
+  margin-top: 0;
+}
+.message-content--md :deep(ul),
+.message-content--md :deep(ol) {
+  margin: 0.5em 0;
+  padding-left: 1.5rem;
+}
+.message-content--md :deep(li) {
+  margin: 0.2em 0;
+}
+.message-content--md :deep(code) {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+}
+.message-content--md :deep(pre) {
+  margin: 0.5em 0;
+  padding: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.06);
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+.message-content--md :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+.message-content--md :deep(strong) {
+  font-weight: 700;
+}
+.message-content--md :deep(blockquote) {
+  margin: 0.5em 0;
+  padding-left: 1rem;
+  border-left: 3px solid #9ca3af;
+  color: #4b5563;
 }
 
 .search-badge {
