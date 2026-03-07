@@ -1,5 +1,3 @@
-import os
-
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -9,15 +7,8 @@ from services import ChatRequest, ChatResponse, ValidationError, create_chat_ser
 # 讀取 .env 檔案
 load_dotenv()
 
-if not os.getenv('SECRET_KEY'):
-    secret_key = os.urandom(24)
-    with open('.env', 'a') as f:
-        f.write(f"SECRET_KEY={secret_key.hex()}\n")
-
-# 初始化 Flask
+# 初始化 Flask（stateless API，未使用 sessions，無需 SECRET_KEY）
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
-
 CORS(app)
 
 
