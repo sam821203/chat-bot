@@ -1,3 +1,9 @@
+:root {
+  --color-primary: #7b3bff;
+  --color-primary-hover: #6528e6;
+  --color-primary-muted: #b794f6;
+}
+
 * {
   margin: 0;
   padding: 0;
